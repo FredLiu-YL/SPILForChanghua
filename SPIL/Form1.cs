@@ -23,6 +23,11 @@ namespace SPIL
 {
     public partial class Form1 : Form
     {
+        private int olsDelayTime = 200;
+        //紀錄 斷線後計數   
+        private int isOLSConectCount = 0;
+        private object sendlock = new object();
+
         public Form1()
         {
             InitializeComponent();
@@ -39,7 +44,9 @@ namespace SPIL
         static string Password = "YuanLi11084483";//Taipei
         static string Password2 = "YuanLi97285208";//Taichung
         static string Password3 = "YuanLi97119617";//Kaohsiung
-        char[] can_key_in_data = {'R','D','W','_','-','.','T','*','F','S'};
+        static string Password4 = "11084483";// 
+        static string Password5 = "1";// 
+        char[] can_key_in_data = { 'R', 'D', 'W', '_', '-', '.', 'T', '*', 'F', 'S', 'L' };
         Logger logger = new Logger("SPIL");
         string Save_File_Address = "";
         string Save_File_Folder = "";
@@ -50,7 +57,7 @@ namespace SPIL
         int button_click_times = 10;
         int now_button_click_delay = 0;
         int OLS_Initial_Now_Step = 0;
-        int[,] point_data_write_0 = new int[2,9];
+        int[,] point_data_write_0 = new int[2, 9];
         int[,] point_data_write_45 = new int[2, 9];
         int[] recipe_data_Write = new int[2];
         int[] Wafer_ID_data_Write = new int[2];
@@ -312,6 +319,8 @@ namespace SPIL
             DateTime Now_ = DateTime.Now;
             string D_ = Now_.ToString("yyyyMMdd");
             string T_ = Now_.ToString("hhmmss");
+            if (textBox_LotID.Text == "")
+                textBox_LotID.Text = "LotID";
             write_date = D_;
             write_time = T_;
             //
@@ -325,6 +334,7 @@ namespace SPIL
                 second_ = second_.Replace("*D*", D_);
                 second_ = second_.Replace("*T*", T_);
                 second_ = second_.Replace("*W*", textBox_Wafer_ID.Text);
+                second_ = second_.Replace("*L*", textBox_LotID.Text);
                 second_ = second_.Replace("*RF*", textBox_RFID.Text);
                 second_ = second_.Replace("*S*", textBox_Slot.Text);
                 file_add = file_add + second_ + "\\";
@@ -337,6 +347,7 @@ namespace SPIL
                 second_ = second_.Replace("*D*", D_);
                 second_ = second_.Replace("*T*", T_);
                 second_ = second_.Replace("*W*", textBox_Wafer_ID.Text);
+                second_ = second_.Replace("*L*", textBox_LotID.Text);
                 second_ = second_.Replace("*RF*", textBox_RFID.Text);
                 second_ = second_.Replace("*S*", textBox_Slot.Text);
                 file_add = file_add + second_ + "\\";
@@ -349,6 +360,7 @@ namespace SPIL
                 second_ = second_.Replace("*D*", D_);
                 second_ = second_.Replace("*T*", T_);
                 second_ = second_.Replace("*W*", textBox_Wafer_ID.Text);
+                second_ = second_.Replace("*L*", textBox_LotID.Text);
                 second_ = second_.Replace("*RF*", textBox_RFID.Text);
                 second_ = second_.Replace("*S*", textBox_Slot.Text);
                 //file_add = file_add + second_ + ".xml";
@@ -368,7 +380,7 @@ namespace SPIL
         private int A_to_Num(string A)
         {
             int Byte_to_Int = 0;
-            if (A.Length <=1)
+            if (A.Length <= 1)
             {
                 Byte A_to_Byte = Convert.ToByte(Convert.ToChar(A));
                 Byte_to_Int = Convert.ToInt32(A_to_Byte) - 64;
@@ -764,7 +776,7 @@ namespace SPIL
                 for (int i = 0; i < sub_string_.Length; i++)
                     logger.Write_Logger("Cal " + Convert.ToString(i) + " = " + sub_string_[i]);
                 return sub_string_;
-            }    
+            }
             else
             {
                 logger.Write_Error_Logger("Receive Data Count Error!");
@@ -790,10 +802,10 @@ namespace SPIL
             {
                 string recipe_name = textBox_Recipe_Name.Text;
                 int recipe_len = recipe_name.Length;
-                
+
                 //
                 DirectoryInfo vpp_file_folder = new DirectoryInfo(variable_data.Vision_Pro_File);
-                string vpp_file_name = vpp_file_folder.GetFiles(recipe_name.Substring(recipe_len-4) + "*" + ".vpp")[0].FullName;
+                string vpp_file_name = vpp_file_folder.GetFiles(recipe_name.Substring(recipe_len - 4) + "*" + ".vpp")[0].FullName;
                 //AOI_Measurement = new SPILBumpMeasure(variable_data.Vision_Pro_File + "\\" + type_num + ".vpp");
                 AOI_Measurement = new SPILBumpMeasure(vpp_file_name);
                 //綁定cogRecordDisplay 用來存toolblock結果圖
@@ -825,36 +837,41 @@ namespace SPIL
                     Send_Server("12,SetRecipe,e>");
 
             }
-            catch(Exception error)
+            catch (Exception error)
             {
                 logger.Write_Error_Logger("Set Recipe Error! " + error.ToString());
                 Send_Server("12,SetRecipe,x>");
             }
         }
-        private void Receive_Mode(string receive_data)
+        private async void Receive_Mode(string receive_data)
         {
             if (receive_data == "Top")
             {
                 UpdateRadioButton(true, radioButton_Degree_0);
+
                 open_hide_1 = false;
                 open_hide_2 = true;
+
+                Thread.Sleep(200);
                 button_hb_off_Click(sender1, e1);
                 if (!is_test_mode)
                     Send_Server("07,Mode,e>");
+
             }
-            else if(receive_data == "Side")
+            else if (receive_data == "Side")
             {
                 UpdateRadioButton(true, radioButton_Degree_45);
                 open_hide_1 = true;
                 open_hide_2 = false;
+                Thread.Sleep(200);
                 button_hb_on_Click(sender1, e1);
                 if (!is_test_mode)
                     Send_Server("07,Mode,e>");
             }
         }
-        private void Receive_Start(int Totoal_Point,string wafer_ID,int now_Slot)
+        private void Receive_Start(int Totoal_Point, string wafer_ID, int now_Slot)
         {
-            for(int i=1;i<21;i++)
+            for (int i = 1; i < 21; i++)
             {
                 UpdateTextboxEnable(false, textBoxes_0_1_20[i]);
                 UpdateTextbox("0", textBoxes_0_1_20[i]);
@@ -891,7 +908,7 @@ namespace SPIL
             {
                 Send_Server("08,InPos,e>");
             }
-            
+
         }
         private void Receive_Stop(string receive_data, object sender, EventArgs e)
         {
@@ -916,11 +933,11 @@ namespace SPIL
         }
         #endregion
         //
-        private void AOI_Calculate(SPILBumpMeasure Measuremrnt ,string file_address1, string file_address2, string file_address3, bool is_maunal)
+        private void AOI_Calculate(SPILBumpMeasure Measuremrnt, string file_address1, string file_address2, string file_address3, bool is_maunal)
         {
             logger.Write_Logger("AOI Measurment Point " + textBox_Point.Text);
             double Measurement_Result, Measurement_Result_2;
-            Measuremrnt.Measurment(file_address1, file_address2, file_address3, is_maunal, out Measurement_Result,out Measurement_Result_2);
+            Measuremrnt.Measurment(file_address1, file_address2, file_address3, is_maunal, out Measurement_Result, out Measurement_Result_2);
             if (Measurement_Result != -1 && Measurement_Result_2 != -1)
             {
                 Measurement_Result = Measurement_Result * variable_data.Degree_Ratio;
@@ -1116,7 +1133,12 @@ namespace SPIL
         private void Form1_Load(object sender, EventArgs e)
         {
             int counter = 0;
-
+            //當測試檔案存在時
+            //test mode
+            if (File.Exists("test.txt"))
+            {
+                is_test_mode = true;
+            }
 
             //防止開啟第二次
             if (System.Diagnostics.Process.GetProcessesByName(System.Diagnostics.Process.GetCurrentProcess().ProcessName).Length > 1)
@@ -1143,9 +1165,16 @@ namespace SPIL
                     Search_IP(i);
                 }
                 //選擇一個乙太卡開啟socket server
-                if (comboBox_IP.Items.Count == 0)
+                if (comboBox_IP.Items.Count == 0 && is_test_mode == false)
                 {
                     return;
+                }
+                if (is_test_mode)
+                {
+                    comboBox_IP.Items.Clear();
+                    comboBox_IP.Items.Add("127.0.0.1");
+                    comboBox_IP_Motion.Items.Clear();
+                    comboBox_IP_Motion.Items.Add("127.0.0.1");
                 }
                 comboBox_IP.SelectedIndex = 0;
                 comboBox_IP_Motion.SelectedIndex = 0;
@@ -1155,17 +1184,13 @@ namespace SPIL
                 combine_text_box();
             }
 
-            //當測試檔案存在時
-            //test mode
-            if (File.Exists("test.txt"))
-            {
-                is_test_mode = true;
-            }
+
             if (is_test_mode)
             {
                 logger.Write_Logger("test mode");
                 groupBox_test_item.Visible = true;
                 string vpp_file_test_path = "";
+
                 StreamReader file = new StreamReader("test.txt");
                 string line;
                 while ((line = file.ReadLine()) != null)
@@ -1245,7 +1270,8 @@ namespace SPIL
         {
             if (!log_in)
             {
-                if (textBox_Password.Text == Password || textBox_Password.Text == Password2 || textBox_Password.Text == Password3)
+                if (textBox_Password.Text == Password || textBox_Password.Text == Password2 || 
+                    textBox_Password.Text == Password3 || textBox_Password.Text == Password4|| textBox_Password.Text == Password5)
                 {
                     logger.Write_Logger("Log In");
                     log_in = true;
@@ -1313,7 +1339,7 @@ namespace SPIL
                 }
             }
         }
-       
+
         private void textBox_Point_9_0_Num_KeyUp(object sender, KeyEventArgs e)
         {
             for (int i = 32; i <= 126; i++)
@@ -1323,7 +1349,7 @@ namespace SPIL
                     can_key = true;
                 if (!can_key)
                 {
-                    
+
                     textBox_Cover_Start_X1.Text = textBox_Cover_Start_X1.Text.Replace(Convert.ToString(Convert.ToChar(i)), "");
                     textBox_Cover_Start_Y1.Text = textBox_Cover_Start_Y1.Text.Replace(Convert.ToString(Convert.ToChar(i)), "");
                     textBox_Cover_End_X1.Text = textBox_Cover_End_X1.Text.Replace(Convert.ToString(Convert.ToChar(i)), "");
@@ -1344,7 +1370,7 @@ namespace SPIL
             {
                 double ratio_ = Convert.ToDouble(textBox_45_Ratio.Text);
             }
-            catch(Exception error)
+            catch (Exception error)
             {
                 textBox_45_Ratio.Text = "";
             }
@@ -1538,7 +1564,7 @@ namespace SPIL
 
                 SW_.WriteLine("    <Setup Setup=\"Degree_Ratio\">" + Convert.ToString(textBox_45_Ratio.Text) + "</Setup>");
                 //
-               
+
                 SW_.WriteLine("  </Setup_Part>");//
                 //
                 SW_.WriteLine("</SPIL_Program_Setup>");//
@@ -1644,7 +1670,7 @@ namespace SPIL
                     "Cu Height," +
                     "Ni Height," +
                     "Solder tip Height");
-                for(int i=1;i<21;i++)
+                for (int i = 1; i < 21; i++)
                 {
                     double z_dif = Convert.ToDouble(textBoxes_0_1_20[i].Text) - Convert.ToDouble(textBoxes_CuNi_1_20[i].Text);
                     double Ni = Convert.ToDouble(textBoxes_CuNi_1_20[i].Text) - Convert.ToDouble(textBoxes_Cu_1_20[i].Text);
@@ -1661,7 +1687,7 @@ namespace SPIL
                 File.Copy(Save_File_Address, "C:\\Users\\Public\\Documents\\SPIL_Measurement_Data.csv", true);
                 logger.Write_Logger("Save OK");
             }
-            catch(Exception error)
+            catch (Exception error)
             {
                 logger.Write_Logger("Save Error!" + error.ToString());
             }
@@ -1849,12 +1875,13 @@ namespace SPIL
                 Socketserver_Motion.Listen(10);    //設定最多10個排隊連線請求
                 logger.Write_Logger("Create Motion Server Successful");
                 timer_Server.Enabled = true;
-                UpdatePicturebox(I_Green,pictureBox_Connect_Status);
+
             }
             catch (Exception error)
             {
                 MessageBox.Show(error.ToString());
                 logger.Write_Error_Logger("Create Motion Server Fail ! " + error.ToString());
+                UpdatePicturebox(I_Red, pictureBox_Connect_Status);
             }
         }
         private void timer_Server_Tick(object sender, EventArgs e)
@@ -1875,6 +1902,7 @@ namespace SPIL
                     //連線成功
                     clientSocket_Motion = Socketserver_Motion.Accept();
                     connect_Motion_client = true;
+                    UpdatePicturebox(I_Green, pictureBox_Connect_Status);
                     logger.Write_Logger("Connect client : " + IPAddress.Parse(((IPEndPoint)clientSocket_Motion.RemoteEndPoint).Address.ToString()) + Environment.NewLine);
                 }
                 else
@@ -1962,7 +1990,7 @@ namespace SPIL
         }
         private void backgroundWorker_OLS_File_DoWork(object sender, DoWorkEventArgs e)
         {
-            
+
             if (!folder_info.Exists)
             {
                 logger.Write_Error_Logger("OLS File Folder:" + folder_info.FullName + " is not found! ");
@@ -2045,7 +2073,7 @@ namespace SPIL
                                         logger.Write_Logger("AOI_Calculate");
                                         button_hb_on_Click(sender, e);
                                     }
-                                    
+
                                 }
                                 else
                                 {
@@ -2059,7 +2087,7 @@ namespace SPIL
                                         logger.Write_Logger("AOI_Calculate");
                                         button_hb_on_Click(sender, e);
                                     }
-                                    
+
                                 }
 
                                 //if (count > 3)//已經存超過兩張
@@ -2075,7 +2103,7 @@ namespace SPIL
                                 //        AOI_Calculate(AOI_Measurement, Save_AOI_file_name[0], Save_AOI_file_name[1], Save_AOI_file_name[2]);
                                 //        logger.Write_Logger("AOI自動量測");
                                 //    }
-                                    
+
                                 //    count = 1;
                                 //    logger.Write_Logger("Img file 1 : " + Save_AOI_file_name[0]);
                                 //    logger.Write_Logger("Img file 2 : " + Save_AOI_file_name[1]);
@@ -2085,7 +2113,7 @@ namespace SPIL
                                 //}
                             }
                         }
-                        
+
                     }
                 }
                 if (checkBox_xlsx.Checked)
@@ -2260,7 +2288,7 @@ namespace SPIL
                         }
                     }
                 }
-                else if(checkBox_poir.Checked && copy_poir_once)
+                else if (checkBox_poir.Checked && copy_poir_once)
                 {
                     FileInfo[] FIle_List = folder_info.GetFiles("*.poir");
                     if (FIle_List.Length > 0)
@@ -2280,7 +2308,7 @@ namespace SPIL
                     }
                 }
             }
-            
+
         }
         private void timer_Initial_Tick(object sender, EventArgs e)
         {
@@ -2329,10 +2357,11 @@ namespace SPIL
             {
                 logger.Write_Logger("Open Hide 1");
                 string send_data_str = get_socket_send_data();
-                //clientSocket_OLS.Send(StringToByteArray(send_data_str));
-                Thread.Sleep(100);
-                clientSocket_OLS.Send(StringToByteArray("open_1"));
-                Thread.Sleep(100); 
+
+                //Thread.Sleep(olsDelayTime);
+                //clientSocket_OLS.Send(StringToByteArray("open_1"));
+                //Thread.Sleep(olsDelayTime);
+                SendOLSCommand("open_1");
             }
             catch (Exception error)
             {
@@ -2344,8 +2373,10 @@ namespace SPIL
             try
             {
                 logger.Write_Logger("Close Hide 1");
-                clientSocket_OLS.Send(StringToByteArray("close_1"));
-                Thread.Sleep(100);
+                //clientSocket_OLS.Send(StringToByteArray("close_1"));
+                //Thread.Sleep(200);
+
+                SendOLSCommand("close_1");
             }
             catch (Exception error)
             {
@@ -2358,10 +2389,11 @@ namespace SPIL
             {
                 logger.Write_Logger("Open Hide 2");
                 string send_data_str = get_socket_send_data();
-                //clientSocket_OLS.Send(StringToByteArray(send_data_str));
-                Thread.Sleep(100);
-                clientSocket_OLS.Send(StringToByteArray("open_2"));
-                Thread.Sleep(100);
+
+                //Thread.Sleep(olsDelayTime);
+                //clientSocket_OLS.Send(StringToByteArray("open_2"));
+                //Thread.Sleep(olsDelayTime);
+                SendOLSCommand("open_2");
             }
             catch (Exception error)
             {
@@ -2373,8 +2405,10 @@ namespace SPIL
             try
             {
                 logger.Write_Logger("Close Hide 2");
-                clientSocket_OLS.Send(StringToByteArray("close_2"));
-                Thread.Sleep(100);
+                //clientSocket_OLS.Send(StringToByteArray("close_2"));
+                //Thread.Sleep(olsDelayTime);
+
+                SendOLSCommand("close_2");
             }
             catch (Exception error)
             {
@@ -2420,11 +2454,14 @@ namespace SPIL
         {
             try
             {
+
                 if (!connect_OLS_client)
                 {
                     //連線成功
                     clientSocket_OLS = Socketserver_OLS.Accept();
                     connect_OLS_client = true;
+
+                    UpdatePicturebox(I_Green, pictureBox_IsOLSConnect);
                     UpdateTextboxAdd("Client connect ip:" + IPAddress.Parse(((IPEndPoint)clientSocket_OLS.RemoteEndPoint).Address.ToString()) + Environment.NewLine, textBox_Server_Receive);
                     //傳送預設資料
                     string send_data_str = get_socket_send_data();
@@ -2433,21 +2470,41 @@ namespace SPIL
                         send_data[i] = Convert.ToByte(send_data_str[i]);
                     logger.Write_Logger("Connect client : " + IPAddress.Parse(((IPEndPoint)clientSocket_OLS.RemoteEndPoint).Address.ToString()) + Environment.NewLine);
                     clientSocket_OLS.Send(send_data);
+                    isOLSConectCount = 0;
                 }
                 else
                 {
                     try
                     {
+                        var isPoll = clientSocket_OLS.Poll(1000, SelectMode.SelectRead);
+                        var isConnected = clientSocket_OLS.Connected;
+
+                        //if (clientSocket_OLS.Connected) throw new Exception("OLS DisConnect");
                         byte[] Receive_data = new byte[1024];
                         string receive_data = "";
                         //通過clientSocket接收資料
                         int receiveNumber = clientSocket_OLS.Receive(Receive_data);
+                        if (receiveNumber == 0)
+                        {
+                            if (isOLSConectCount >= 5) //超過10次都沒收到資料  判斷已斷線
+                            {
+                                clientSocket_OLS.Send(StringToByteArray("heartbeat")); //送命令看看有沒有斷線
+                                                                                       // throw new OLSConectException();
+                            }
+                            isOLSConectCount++;
+
+                        }
+                        else
+                            isOLSConectCount = 0;
                         for (int i = 0; i < 1024; i++)
                         {
                             if (Receive_data[i] == 0)
-                                break;
+                            {
+
+                            }
                             else
                             {
+                                isOLSConectCount = 0;
                                 receive_data += Convert.ToString(Convert.ToChar(Receive_data[i]));
                             }
                         }
@@ -2456,10 +2513,24 @@ namespace SPIL
                             UpdateTextboxAdd("進入手動量測模式" + "\r\n", textBox_Server_Receive);
                             is_hand_measurement = true;
                         }
+                        if (receive_data == "onLine")
+                        {
+
+
+                        }
                         //從cover_and_init接收資料
                         UpdateTextboxAdd("OLS Recive:" + receive_data + "\r\n", textBox_Server_Receive);
-                        
+
                         logger.Write_Logger("OLS Recive:" + receive_data);
+
+                    }
+                    catch (OLSConectException olsEX)
+                    {
+                        clientSocket_OLS.Shutdown(SocketShutdown.Both);
+                        clientSocket_OLS.Close();
+                        connect_OLS_client = false;
+                        logger.Write_Error_Logger("OLS Disconnect!");
+                        UpdatePicturebox(I_Red, pictureBox_IsOLSConnect);
 
                     }
                     catch (Exception ex)
@@ -2472,6 +2543,7 @@ namespace SPIL
                             clientSocket_OLS.Close();
                             connect_OLS_client = false;
                             logger.Write_Error_Logger("OLS Disconnect!");
+                            UpdatePicturebox(I_Red, pictureBox_IsOLSConnect);
                         }
                     }
                 }
@@ -2479,6 +2551,7 @@ namespace SPIL
             catch (Exception error)
             {
                 logger.Write_Error_Logger("OLS error" + error.ToString());
+
             }
         }
         private void button_Send_Client_Click(object sender, EventArgs e)
@@ -2529,7 +2602,7 @@ namespace SPIL
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP1"));
-            Thread.Sleep(100);
+            Thread.Sleep(olsDelayTime);
 
         }
         private void button_auto_click_Sp2_Click(object sender, EventArgs e)
@@ -2538,7 +2611,7 @@ namespace SPIL
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP2"));
-            Thread.Sleep(100);
+            Thread.Sleep(olsDelayTime);
         }
         private void button_auto_click_Sp3_Click(object sender, EventArgs e)
         {
@@ -2546,7 +2619,7 @@ namespace SPIL
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP3"));
-            Thread.Sleep(100);
+            Thread.Sleep(olsDelayTime);
         }
         #endregion
 
@@ -2556,7 +2629,7 @@ namespace SPIL
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP5"));
-            Thread.Sleep(100);
+            Thread.Sleep(olsDelayTime);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -2571,26 +2644,36 @@ namespace SPIL
             {
                 try
                 {
-                    double value =Math.Round(Convert.ToDouble(textBox.Text) * Math.Sqrt(2), 5);
+                    double value = Math.Round(Convert.ToDouble(textBox.Text) * Math.Sqrt(2), 5);
                     textBox.Text = value.ToString();
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message.ToString());
                 }
-                
+
             }
 
         }
+        private void button_hb_off_Click(object sender, EventArgs e)
+        {
+            string send_data_str = get_socket_send_data();
+            //clientSocket_OLS.Send(StringToByteArray(send_data_str));
+            /* Thread.Sleep(300);
+             clientSocket_OLS.Send(StringToByteArray("close_hb"));
+             Thread.Sleep(300);*/
 
+            SendOLSCommand("close_hb");
+        }
         private void button_hb_on_Click(object sender, EventArgs e)
         {
             string send_data_str = get_socket_send_data();
             is_hand_measurement = false;
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
-            Thread.Sleep(100);
+            /*Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("open_hb"));
-            Thread.Sleep(100);
+            Thread.Sleep(100);*/
+            SendOLSCommand("open_hb");
         }
 
         private void numericUpDown_AOI_save_idx1_ValueChanged(object sender, EventArgs e)
@@ -2605,7 +2688,7 @@ namespace SPIL
                 AOI_Measurement.manual_save_AOI_result_idx_2 = (int)numericUpDown_manual_save_idx2.Value;
                 AOI_Measurement.manual_save_AOI_result_idx_3 = (int)numericUpDown_manual_save_idx3.Value;
             }
-            if(Hand_Measurement != null)
+            if (Hand_Measurement != null)
             {
                 Hand_Measurement.save_AOI_result_idx_1 = (int)numericUpDown_AOI_save_idx1.Value;
                 Hand_Measurement.save_AOI_result_idx_2 = (int)numericUpDown_AOI_save_idx2.Value;
@@ -2640,7 +2723,7 @@ namespace SPIL
 
         private void button4_Click(object sender, EventArgs e)
         {
-            Receive_Start(18, "12345678",1);
+            Receive_Start(18, "12345678", 1);
         }
 
         private void button5_Click(object sender, EventArgs e)
@@ -2659,13 +2742,57 @@ namespace SPIL
             clientSocket_OLS.Send(StringToByteArray(send_data_str));
         }
 
-        private void button_hb_off_Click(object sender, EventArgs e)
+        private void button7_Click(object sender, EventArgs e)
+        {
+            clientSocket_OLS.Send(StringToByteArray("heartbeat"));
+        }
+
+        private void btn_Cover2Close_Click(object sender, EventArgs e)
+        {
+
+            try
+            {
+                logger.Write_Logger("Close Hide 2");
+                //clientSocket_OLS.Send(StringToByteArray("close_2"));
+                //Thread.Sleep(olsDelayTime);
+
+                SendOLSCommand("close_2");
+            }
+            catch (Exception error)
+            {
+                logger.Write_Error_Logger("Close Hide 2 Error! " + error.ToString());
+            }
+        }
+
+        private void btn_ManualOpen_Click(object sender, EventArgs e)
         {
             string send_data_str = get_socket_send_data();
-            //clientSocket_OLS.Send(StringToByteArray(send_data_str));
-            Thread.Sleep(100);
-            clientSocket_OLS.Send(StringToByteArray("close_hb"));
-            Thread.Sleep(100);
+            is_hand_measurement = false;
+          
+            SendOLSCommand("open_hb");
         }
+
+        private void SendOLSCommand(string message)
+        {
+            lock (sendlock)
+            {
+                Thread.Sleep(100);
+                clientSocket_OLS.Send(StringToByteArray(message));
+                Thread.Sleep(100);
+            }
+        }
+
+    }
+
+
+
+    public class OLSConectException : Exception
+    {
+
+        public OLSConectException()
+        {
+
+        }
+
     }
 }
