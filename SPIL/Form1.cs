@@ -27,6 +27,7 @@ namespace SPIL
         //紀錄 斷線後計數   
         private int isOLSConectCount = 0;
         private object sendlock = new object();
+        private bool isOLSConnect = false;
 
         public Form1()
         {
@@ -792,7 +793,15 @@ namespace SPIL
         {
             logger.Write_Logger("Start Initial");
             //
+            if(!isOLSConnect)
+            {
+                logger.Write_Error_Logger("Init Error! " + "OLSDisConnect !");
+
+                Send_Server("07,Init,x>");
+            }
+         
             Initial_OLS();
+
         }
         private void Receive_SetRecipe(string receive_data)
         {
@@ -836,6 +845,12 @@ namespace SPIL
                 if (!is_test_mode)
                     Send_Server("12,SetRecipe,e>");
 
+                if (!isOLSConnect)
+                {
+                    logger.Write_Error_Logger("Set Recipe Error! " +  "OLSDisConnect !");
+                    Send_Server("12,SetRecipe,x>");
+                }
+                  
             }
             catch (Exception error)
             {
@@ -899,6 +914,13 @@ namespace SPIL
             //
             if (!is_test_mode)
                 Send_Server("08,Start,e>");
+
+            if (!isOLSConnect)
+            {
+                logger.Write_Error_Logger("Start Error! " + "OLSDisConnect !!");
+                Send_Server("08,Start,x>");
+            }
+              
         }
         private void Receive_InPos(int Now_Point)
         {
@@ -2356,7 +2378,7 @@ namespace SPIL
             try
             {
                 logger.Write_Logger("Open Hide 1");
-                string send_data_str = get_socket_send_data();
+             //   string send_data_str = get_socket_send_data();
 
                 //Thread.Sleep(olsDelayTime);
                 //clientSocket_OLS.Send(StringToByteArray("open_1"));
@@ -2388,7 +2410,7 @@ namespace SPIL
             try
             {
                 logger.Write_Logger("Open Hide 2");
-                string send_data_str = get_socket_send_data();
+              //  string send_data_str = get_socket_send_data();
 
                 //Thread.Sleep(olsDelayTime);
                 //clientSocket_OLS.Send(StringToByteArray("open_2"));
@@ -2462,6 +2484,7 @@ namespace SPIL
                     connect_OLS_client = true;
 
                     UpdatePicturebox(I_Green, pictureBox_IsOLSConnect);
+                    isOLSConnect = true;
                     UpdateTextboxAdd("Client connect ip:" + IPAddress.Parse(((IPEndPoint)clientSocket_OLS.RemoteEndPoint).Address.ToString()) + Environment.NewLine, textBox_Server_Receive);
                     //傳送預設資料
                     string send_data_str = get_socket_send_data();
@@ -2531,7 +2554,7 @@ namespace SPIL
                         connect_OLS_client = false;
                         logger.Write_Error_Logger("OLS Disconnect!");
                         UpdatePicturebox(I_Red, pictureBox_IsOLSConnect);
-
+                        isOLSConnect = false;
                     }
                     catch (Exception ex)
                     {
@@ -2544,6 +2567,7 @@ namespace SPIL
                             connect_OLS_client = false;
                             logger.Write_Error_Logger("OLS Disconnect!");
                             UpdatePicturebox(I_Red, pictureBox_IsOLSConnect);
+                            isOLSConnect = false;
                         }
                     }
                 }
@@ -2598,7 +2622,7 @@ namespace SPIL
         private void button_auto_click_Sp1_Click(object sender, EventArgs e)
         {
             Thread.Sleep(1000);
-            string send_data_str = get_socket_send_data();
+         //   string send_data_str = get_socket_send_data();
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP1"));
@@ -2607,7 +2631,7 @@ namespace SPIL
         }
         private void button_auto_click_Sp2_Click(object sender, EventArgs e)
         {
-            string send_data_str = get_socket_send_data();
+           // string send_data_str = get_socket_send_data();
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP2"));
@@ -2615,7 +2639,7 @@ namespace SPIL
         }
         private void button_auto_click_Sp3_Click(object sender, EventArgs e)
         {
-            string send_data_str = get_socket_send_data();
+         //   string send_data_str = get_socket_send_data();
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP3"));
@@ -2625,7 +2649,7 @@ namespace SPIL
 
         private void button_auto_click_Sp5_Click(object sender, EventArgs e)
         {
-            string send_data_str = get_socket_send_data();
+           // string send_data_str = get_socket_send_data();
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             //Thread.Sleep(100);
             clientSocket_OLS.Send(StringToByteArray("SP5"));
@@ -2657,7 +2681,7 @@ namespace SPIL
         }
         private void button_hb_off_Click(object sender, EventArgs e)
         {
-            string send_data_str = get_socket_send_data();
+           // string send_data_str = get_socket_send_data();
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             /* Thread.Sleep(300);
              clientSocket_OLS.Send(StringToByteArray("close_hb"));
@@ -2667,7 +2691,7 @@ namespace SPIL
         }
         private void button_hb_on_Click(object sender, EventArgs e)
         {
-            string send_data_str = get_socket_send_data();
+          //  string send_data_str = get_socket_send_data();
             is_hand_measurement = false;
             //clientSocket_OLS.Send(StringToByteArray(send_data_str));
             /*Thread.Sleep(100);
@@ -2766,7 +2790,7 @@ namespace SPIL
 
         private void btn_ManualOpen_Click(object sender, EventArgs e)
         {
-            string send_data_str = get_socket_send_data();
+          //  string send_data_str = get_socket_send_data();
             is_hand_measurement = false;
           
             SendOLSCommand("open_hb");

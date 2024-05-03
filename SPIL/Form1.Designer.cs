@@ -178,6 +178,7 @@ namespace SPIL
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.btn_ManualOpen = new System.Windows.Forms.Button();
             this.btn_Cover2Close = new System.Windows.Forms.Button();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.label20 = new System.Windows.Forms.Label();
@@ -329,7 +330,6 @@ namespace SPIL
             this.backgroundWorker_delete_old_file = new System.ComponentModel.BackgroundWorker();
             this.timer_connect_client = new System.Windows.Forms.Timer(this.components);
             this.timer_Open_Hide = new System.Windows.Forms.Timer(this.components);
-            this.btn_ManualOpen = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.panel2.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -2013,6 +2013,16 @@ namespace SPIL
             this.tabPage2.Text = "Setup";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
+            // btn_ManualOpen
+            // 
+            this.btn_ManualOpen.Location = new System.Drawing.Point(657, 24);
+            this.btn_ManualOpen.Name = "btn_ManualOpen";
+            this.btn_ManualOpen.Size = new System.Drawing.Size(107, 48);
+            this.btn_ManualOpen.TabIndex = 28;
+            this.btn_ManualOpen.Text = "ManualOpen";
+            this.btn_ManualOpen.UseVisualStyleBackColor = true;
+            this.btn_ManualOpen.Click += new System.EventHandler(this.btn_ManualOpen_Click);
+            // 
             // btn_Cover2Close
             // 
             this.btn_Cover2Close.Location = new System.Drawing.Point(516, 24);
@@ -3560,16 +3570,6 @@ namespace SPIL
             this.timer_Open_Hide.Interval = 30;
             this.timer_Open_Hide.Tick += new System.EventHandler(this.timer_Open_Hide_Tick);
             // 
-            // btn_ManualOpen
-            // 
-            this.btn_ManualOpen.Location = new System.Drawing.Point(657, 24);
-            this.btn_ManualOpen.Name = "btn_ManualOpen";
-            this.btn_ManualOpen.Size = new System.Drawing.Size(107, 48);
-            this.btn_ManualOpen.TabIndex = 28;
-            this.btn_ManualOpen.Text = "ManualOpen";
-            this.btn_ManualOpen.UseVisualStyleBackColor = true;
-            this.btn_ManualOpen.Click += new System.EventHandler(this.btn_ManualOpen_Click);
-            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 16F);
@@ -3580,7 +3580,7 @@ namespace SPIL
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(4);
             this.Name = "Form1";
-            this.Text = "YuanLi OLS AOI-20231117";
+            this.Text = "YuanLi OLS AOI-20231207";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
